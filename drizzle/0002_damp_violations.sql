@@ -1,0 +1,1 @@
+ALTER TABLE `ads` ADD `reach_km` integer DEFAULT 30 NOT NULL;

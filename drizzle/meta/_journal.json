@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790432732001,
+      "tag": "0000_flashy_corsair",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790433584375,
+      "tag": "0001_calm_marvel_zombies",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790433997654,
+      "tag": "0002_damp_violations",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790435127893,
+      "tag": "0003_amused_james_howlett",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790438477081,
+      "tag": "0004_overjoyed_captain_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790441786820,
+      "tag": "0005_safe_jean_grey",
+      "breakpoints": true
+    }
+  ]
+}

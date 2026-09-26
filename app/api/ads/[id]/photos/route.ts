@@ -1,0 +1,8 @@
+import { getUserId } from "../../../../../lib-auth";
+import { NextRequest,NextResponse } from "next/server";
+import {putImage,deleteImage,getImage} from "../../../../../lib-storage";
+import { getDb } from "../../../../../db";
+import { ads,photos } from "../../../../../db/schema";
+import { eq,and } from "drizzle-orm";
+export const dynamic="force-dynamic";
+export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>}){const owner=await getUserId(req);if(!owner)return NextResponse.json({error:"Inicia sesión"},{status:401});const id=Number((await params).id);if(!Number.isSafeInteger(id))return NextResponse.json({error:"Anuncio inválido"},{status:400});try{const db=getDb();const ad=(await db.select().from(ads).where(and(eq(ads.id,id),eq(ads.owner,owner))).limit(1))[0];if(!ad)return NextResponse.json({error:"Anuncio no encontrado"},{status:404});if(ad.photoCount>=5)return NextResponse.json({error:"Máximo 5 fotos por anuncio"},{status:400});const form=await req.formData();const file=form.get("photo");if(!(file instanceof File)||!(["image/jpeg","image/png","image/webp"].includes(file.type))||file.size>5*1024*1024||file.size<100)return NextResponse.json({error:"Usa una foto JPG, PNG o WebP de hasta 5 MB"},{status:400});const bytes=await file.arrayBuffer();let key=`ads/${id}/${crypto.randomUUID()}`;key=await putImage(key,bytes,file.type);try{const [row]=await db.insert(photos).values({adId:id,objectKey:key}).returning({id:photos.id});await db.update(ads).set({photoCount:ad.photoCount+1}).where(eq(ads.id,id));return NextResponse.json({url:`/api/photos/${row.id}`},{status:201})}catch(e){await deleteImage(key);throw e}}catch(e){console.error("photo upload",e);return NextResponse.json({error:"No se pudo subir la foto"},{status:503})}}

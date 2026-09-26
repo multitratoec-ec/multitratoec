@@ -1,0 +1,9 @@
+import { getUserId } from "../../../../lib-auth";
+import { NextRequest,NextResponse } from "next/server";
+import {putImage,deleteImage,getImage} from "../../../../lib-storage";
+import { getDb } from "../../../../db";
+import { photos,ads } from "../../../../db/schema";
+import { eq,and } from "drizzle-orm";
+export const dynamic="force-dynamic";
+export async function GET(_req:NextRequest,{params}:{params:Promise<{id:string}>}){const id=Number((await params).id);if(!Number.isSafeInteger(id))return new Response("Not found",{status:404});try{const row=(await getDb().select().from(photos).where(eq(photos.id,id)).limit(1))[0];if(!row)return new Response("Not found",{status:404});const object=await getImage(row.objectKey);if(!object)return new Response("Not found",{status:404});return new Response(object.body,{headers:{"Content-Type":object.headers.get("Content-Type")||"image/jpeg","Cache-Control":"public, max-age=3600","X-Content-Type-Options":"nosniff"}})}catch(e){console.error("photo get",e);return new Response("Unavailable",{status:503})}}
+export async function DELETE(req:NextRequest,{params}:{params:Promise<{id:string}>}){const owner=await getUserId(req);if(!owner)return NextResponse.json({error:"Inicia sesión"},{status:401});const id=Number((await params).id);if(!Number.isSafeInteger(id))return NextResponse.json({error:"Foto inválida"},{status:400});try{const db=getDb();const row=(await db.select({photo:photos,ad:ads}).from(photos).innerJoin(ads,eq(photos.adId,ads.id)).where(and(eq(photos.id,id),eq(ads.owner,owner))).limit(1))[0];if(!row)return NextResponse.json({error:"Foto no encontrada"},{status:404});await db.delete(photos).where(eq(photos.id,id));await db.update(ads).set({photoCount:Math.max(0,row.ad.photoCount-1)}).where(eq(ads.id,row.ad.id));await deleteImage(row.photo.objectKey);return NextResponse.json({ok:true})}catch(e){console.error("photo delete",e);return NextResponse.json({error:"No se pudo quitar la foto"},{status:503})}}
