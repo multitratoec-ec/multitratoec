@@ -4,3 +4,9 @@ node_modules/
 .env.*.local
 *.tsbuildinfo
 site-archive*.tar.gz
+dist/
+.wrangler/
+.dev.vars
+.env
+next-env.d.ts
+.vinext/
