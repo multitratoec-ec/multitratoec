@@ -19,7 +19,32 @@ const icons:Record<string,typeof Package>={Productos:Package,Servicios:Wrench,Al
 function distance(a:number,b:number,c:number,d:number){const r=Math.PI/180,x=(c-a)*r,y=(d-b)*r;return Math.round(6371*2*Math.asin(Math.sqrt(Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2))*10)/10}
 async function jsonFetch<T=any>(url:string,init?:RequestInit):Promise<T>{const r=await fetch(url,init);const data=await r.json() as T & {error?:string};if(!r.ok)throw Error(data.error||"No se pudo completar la acción.");return data}
 const signIn=()=>window.location.assign("/?iniciar-sesion=1");
-function SignIn({text="Iniciar sesión"}:{text?:string}){const [register,setRegister]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError("");const form=new FormData(e.currentTarget),email=String(form.get("email")||""),password=String(form.get("password")||"");const result=register?await authClient.signUp.email({name:String(form.get("name")||""),email,password,callbackURL:"/"}):await authClient.signIn.email({email,password,callbackURL:"/"});if(result.error){setError(result.error.message||"No se pudo iniciar sesión.");setBusy(false);return}window.location.assign("/")}return <details className="auth-box"><summary className="primary"><UserRound size={17}/>{text}</summary><form className="stack-form" onSubmit={submit}>{register&&<label>Nombre<input name="name" required minLength={2} maxLength={60} autoComplete="name"/></label>}<label>Correo electrónico<input name="email" type="email" required autoComplete="email"/></label><label>Contraseña<input name="password" type="password" required minLength={8} autoComplete={register?"new-password":"current-password"}/></label>{error&&<p className="alert" role="alert">{error}</p>}<button className="submit" disabled={busy}>{busy?"Procesando…":register?"Crear cuenta":"Entrar"}</button><button type="button" className="button-reset" onClick={()=>setRegister(!register)}>{register?"Ya tengo una cuenta":"Crear una cuenta"}</button></form></details>}
+function SignIn({text="Iniciar sesión"}:{text?:string}) {
+ const [register,setRegister]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ async function submit(e:React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();setBusy(true);setError("");
+  const form=new FormData(e.currentTarget),email=String(form.get("email")||"").trim(),password=String(form.get("password")||"");
+  try {
+   if(register) {
+    if(password!==form.get("confirmPassword"))throw Error("Las contraseñas no coinciden.");
+    const response=await fetch("/api/auth/sign-up/email",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:String(form.get("name")||"").trim(),email,password,city:form.get("city"),accountType:form.get("accountType"),acceptTerms:form.get("acceptTerms")==="on"})});
+    const data=await response.json() as {message?:string};if(!response.ok)throw Error(data.message||"No se pudo crear la cuenta.");
+   } else {
+    const result=await authClient.signIn.email({email,password,callbackURL:"/"});
+    if(result.error)throw Error(result.error.message||"No se pudo iniciar sesión.");
+   }
+   window.location.assign("/?iniciar-sesion=1");
+  } catch(e) {setError(e instanceof Error?e.message:"No se pudo completar la acción.");}
+  finally {setBusy(false);}
+ }
+ return <details className="auth-box"><summary className="primary"><UserRound size={17}/>{text}</summary><form className="stack-form" onSubmit={submit}>
+ <h2>{register?"Crear cuenta":"Iniciar sesión"}</h2>
+ {register&&<label>Nombre y apellido<input name="name" required minLength={2} maxLength={60} autoComplete="name"/></label>}
+ <label>Correo electrónico<input name="email" type="email" required autoComplete="email" maxLength={254}/></label>
+ <label>Contraseña<input name="password" type="password" required minLength={8} maxLength={128} autoComplete={register?"new-password":"current-password"}/></label>
+ {register&&<><label>Confirmar contraseña<input name="confirmPassword" type="password" required minLength={8} maxLength={128} autoComplete="new-password"/></label><label>Ciudad<select name="city" required><option value="">Selecciona tu ciudad</option>{cities.map(city=><option key={city}>{city}</option>)}</select></label><label>Tipo de cuenta<select name="accountType"><option value="persona">Persona</option><option value="empresa">Negocio</option></select></label><label className="check-inline"><input name="acceptTerms" type="checkbox" required/>Acepto los <a href="/legal#terminos" target="_blank" rel="noreferrer">términos y la política de privacidad</a></label></>}
+ {error&&<p className="alert" role="alert">{error}</p>}<button className="submit" disabled={busy}>{busy?"Procesando…":register?"Crear cuenta":"Entrar"}</button><button type="button" className="button-reset" disabled={busy} onClick={()=>{setRegister(!register);setError("")}}>{register?"Ya tengo una cuenta":"Crear una cuenta"}</button></form></details>
+}
 function Stars({rating,count}:{rating:number|null;count?:number}){return <span className="stars"><Star size={16} fill={rating?"currentColor":"none"}/> {rating?`${rating.toFixed(1)}${count?` (${count})`:""}`:"Sin calificaciones"}</span>}
 function Photo({ad}:{ad:Ad}){const Icon=icons[ad.kind]||Package;return <div className={`art ${ad.kind}`}>{ad.photos?.[0]?<img src={ad.photos[0]} alt={`Foto de ${ad.title}`}/>:<Icon size={46} strokeWidth={1.4}/>}<span>{ad.kind}</span></div>}
 function Card({ad,onOpen,saved,onFavorite}:{ad:Ad;onOpen:(ad:Ad)=>void;saved:boolean;onFavorite:(ad:Ad)=>void}){return <article className="card"><button className="card-open" onClick={()=>onOpen(ad)}><Photo ad={ad}/><div className="card-body"><small className="pill">{ad.category}</small><h3>{ad.title}</h3><p><MapPin size={15}/>{ad.city}{ad.condition!=="no_aplica"&&` · ${ad.condition==="nuevo"?"Nuevo":"Usado"}`}</p><div className="sellerline"><span>{ad.seller}{ad.verifiedCompany&&<BadgeCheck size={14} aria-label="Empresa verificada"/>}</span><Stars rating={ad.rating}/></div><div className="price"><strong>${Number(ad.price).toLocaleString("es-EC",{maximumFractionDigits:2})}</strong><small>{ad.unit}</small></div></div></button><button className={saved?"favorite-button saved":"favorite-button"} aria-label={saved?"Quitar de favoritos":"Guardar en favoritos"} onClick={()=>onFavorite(ad)}><Heart size={20} fill={saved?"currentColor":"none"}/></button></article>}

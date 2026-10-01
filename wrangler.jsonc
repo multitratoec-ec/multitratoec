@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "multitrato-ec",
+  "main": "vinext/server/fetch-handler",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "multitrato-images"
+    }
+  ],
+  "cache": {
+    "enabled": true
+  }
+}
